@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>100 Nights of Game Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky:#d9ecff; --sky2:#bfdcfb; --ink:#1d2a4d; --soft:#4a5a85;
+  --wire:#7d8db8; --off:#eef4ff; --offline:#a9b8da;
+  --btn:#ff8a3d; --btnInk:#2a1300; --card:rgba(255,255,255,.6); --sheet:#ffffff;
+  --table:#c98a4b; --tableEdge:#9a6532;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --sky:#141a3a; --sky2:#0a0e24; --ink:#fff4dc; --soft:#b9c0e6;
+    --wire:#3a4475; --off:#252c55; --offline:#3d4680;
+    --btn:#ffb347; --btnInk:#2a1300; --card:rgba(255,255,255,.07); --sheet:#1d2450;
+    --table:#8a5a2f; --tableEdge:#5e3c1c;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --sky:#141a3a; --sky2:#0a0e24; --ink:#fff4dc; --soft:#b9c0e6;
+  --wire:#3a4475; --off:#252c55; --offline:#3d4680;
+  --btn:#ffb347; --btnInk:#2a1300; --card:rgba(255,255,255,.07); --sheet:#1d2450;
+  --table:#8a5a2f; --tableEdge:#5e3c1c;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{margin:0;min-height:100%}
+body{
+  background:var(--sky);
+  background-image:linear-gradient(180deg,var(--sky2),var(--sky));
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:"Baloo 2","Chalkboard SE","Comic Sans MS","Trebuchet MS",sans-serif;
+  -webkit-tap-highlight-color:transparent;
+}
+.wrap{max-width:860px;margin:0 auto;padding:16px 16px 40px}
+header{text-align:center;margin:0 0 14px}
+.hero{display:block;width:100%;max-width:420px;height:auto;margin:0 auto}
+.hero .bob{-webkit-animation:bob 3s ease-in-out infinite;animation:bob 3s ease-in-out infinite;-webkit-transform-origin:center;transform-origin:center}
+.hero .bob2{-webkit-animation:bob 3s ease-in-out 1.5s infinite;animation:bob 3s ease-in-out 1.5s infinite}
+@-webkit-keyframes bob{0%,100%{-webkit-transform:translateY(0)}50%{-webkit-transform:translateY(-6px)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+h1{font-size:2.4rem;line-height:1.05;margin:4px 0 6px;font-weight:800;letter-spacing:-.01em}
+.count{font-size:1.25rem;color:var(--soft);margin:0}
+.count b{color:var(--ink);font-size:1.7rem}
+
+.strands{padding:6px 0 8px}
+.strand{position:relative;display:-webkit-box;display:-webkit-flex;display:flex;margin:0 0 6px;padding-top:8px}
+.strand:before{content:"";position:absolute;left:2%;right:2%;top:8px;height:2px;background:var(--wire);border-radius:2px}
+.slot{-webkit-box-flex:0;-webkit-flex:0 0 10%;flex:0 0 10%;width:10%;padding:0 3%;position:relative}
+.slot:before{content:"";position:absolute;left:50%;top:-6px;width:8px;height:8px;margin-left:-4px;background:var(--wire);border-radius:2px}
+.bulb{display:block;width:100%;padding-top:125%;position:relative;border:0;margin:0;background:transparent;cursor:pointer;-webkit-appearance:none;appearance:none}
+.bulb .glass{
+  position:absolute;left:0;right:0;top:0;bottom:0;
+  border-radius:50% 50% 48% 48% / 42% 42% 58% 58%;
+  background:var(--off);border:2px solid var(--offline);
+  -webkit-transition:background .4s, box-shadow .4s;transition:background .4s, box-shadow .4s;
+}
+.bulb .num{position:absolute;left:0;right:0;top:50%;margin-top:-.6em;text-align:center;font-size:.8rem;font-weight:700;color:var(--offline);line-height:1.2}
+.bulb.lit .glass{border-color:transparent}
+.bulb.lit .num{color:rgba(40,20,0,.75)}
+.bulb.noted:after{content:"\2605";position:absolute;right:-4px;bottom:-4px;font-size:.7rem;color:var(--btn)}
+.c0.lit .glass{background:#ffd23f;box-shadow:0 0 14px 4px rgba(255,210,63,.75)}
+.c1.lit .glass{background:#ff6b6b;box-shadow:0 0 14px 4px rgba(255,107,107,.7)}
+.c2.lit .glass{background:#4fd18b;box-shadow:0 0 14px 4px rgba(79,209,139,.7)}
+.c3.lit .glass{background:#5ab4ff;box-shadow:0 0 14px 4px rgba(90,180,255,.7)}
+.c4.lit .glass{background:#c08bff;box-shadow:0 0 14px 4px rgba(192,139,255,.7)}
+.bulb.next .glass{border-style:dashed;border-color:var(--btn)}
+.bulb.pop .glass{-webkit-animation:pop .7s ease;animation:pop .7s ease}
+@-webkit-keyframes pop{0%{-webkit-transform:scale(.6)}60%{-webkit-transform:scale(1.25)}100%{-webkit-transform:scale(1)}}
+@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.bulb:focus{outline:none}
+.bulb:focus-visible .glass{outline:3px solid var(--btn);outline-offset:2px}
+
+.actions{text-align:center;margin:20px 0 6px}
+.go{font:inherit;font-size:1.6rem;font-weight:800;padding:14px 34px;border:0;border-radius:999px;background:var(--btn);color:var(--btnInk);cursor:pointer;box-shadow:0 6px 0 rgba(0,0,0,.18)}
+.go:active{-webkit-transform:translateY(3px);transform:translateY(3px);box-shadow:0 3px 0 rgba(0,0,0,.18)}
+.go.done{background:var(--card);color:var(--ink);box-shadow:none;border:2px solid var(--wire);font-size:1.25rem}
+.link{font:inherit;background:none;border:0;color:var(--soft);text-decoration:underline;cursor:pointer;font-size:1.05rem;margin:6px 8px 0;padding:6px}
+.msg{min-height:1.6em;text-align:center;font-size:1.15rem;margin:6px 0 0;color:var(--soft)}
+
+.miles{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-justify-content:center;justify-content:center;margin:16px 0 0;padding:0;list-style:none}
+.miles li{margin:0 6px;padding:6px 14px;border-radius:999px;border:2px dashed var(--wire);color:var(--soft);font-weight:700}
+.miles li.got{border-style:solid;border-color:var(--btn);color:var(--ink);background:var(--card)}
+.party{display:none;text-align:center;margin:14px auto 0;padding:14px;border-radius:18px;background:var(--card);font-size:1.3rem;font-weight:700;max-width:520px}
+.party.show{display:block}
+
+.games{max-width:560px;margin:26px auto 0;padding:16px 18px;border-radius:20px;background:var(--card)}
+.games h2{margin:0 0 8px;font-size:1.4rem}
+.tally{margin:0;padding:0;list-style:none}
+.tally li{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;margin:6px 0;font-size:1.1rem}
+.tally .name{-webkit-box-flex:0;-webkit-flex:0 0 40%;flex:0 0 40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px}
+.tally .bar{-webkit-box-flex:1;-webkit-flex:1;flex:1;height:14px;border-radius:7px;background:var(--off);overflow:hidden;margin-right:8px}
+.tally .fill{height:100%;border-radius:7px;background:var(--btn)}
+.tally .x{font-weight:800;min-width:2em;text-align:right}
+.empty{color:var(--soft);margin:0}
+
+footer{text-align:center;margin-top:24px}
+
+/* Log / edit sheet */
+.veil{display:none;position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(5,8,25,.55);z-index:20;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.veil.show{display:block}
+.sheet{max-width:440px;margin:40px auto;background:var(--sheet);color:var(--ink);border-radius:22px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.sheet h2{margin:0 0 12px;font-size:1.6rem;line-height:1.1}
+.sheet label{display:block;font-weight:700;margin:12px 0 4px;font-size:1.1rem}
+.sheet input{width:100%;font:inherit;font-size:1.15rem;padding:9px 12px;border-radius:12px;border:2px solid var(--wire);background:var(--off);color:var(--ink);-webkit-appearance:none;appearance:none;min-height:46px}
+.chips{margin:8px 0 0}
+.chip{font:inherit;font-size:1rem;font-weight:700;padding:4px 12px;margin:0 6px 6px 0;border-radius:999px;border:2px solid var(--wire);background:transparent;color:var(--ink);cursor:pointer}
+.chip:active{background:var(--off)}
+.warn{color:#e05555;font-weight:700;min-height:1.4em;margin:8px 0 0}
+.sheet .row{margin-top:14px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center}
+.sheet .row .spacer{-webkit-box-flex:1;-webkit-flex:1;flex:1}
+.btn{font:inherit;font-weight:700;font-size:1.1rem;padding:8px 18px;border-radius:999px;border:2px solid var(--wire);background:transparent;color:var(--ink);cursor:pointer;margin-left:8px}
+.btn.primary{background:var(--btn);border-color:var(--btn);color:var(--btnInk)}
+.btn.danger{border-color:#e05555;color:#e05555;margin-left:0}
+
+.panel{display:none;max-width:420px;margin:12px auto 0;padding:16px;border-radius:16px;background:var(--card);text-align:left}
+.panel.show{display:block}
+.panel label{display:block;font-weight:700;margin-bottom:6px}
+.panel input{width:100%;font:inherit;font-size:1.1rem;padding:8px 10px;border-radius:10px;border:2px solid var(--wire);background:var(--off);color:var(--ink)}
+.panel .row{margin-top:12px;text-align:right}
+
+@media (max-width:520px){
+  h1{font-size:1.8rem}
+  .bulb .num{font-size:.62rem}
+  .slot{padding:0 2%}
+  .miles li{margin:0 3px;padding:4px 9px;font-size:.9rem}
+}
+@media (prefers-reduced-motion: reduce){
+  .bulb.pop .glass,.hero .bob,.hero .bob2{-webkit-animation:none;animation:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg class="hero" viewBox="0 0 420 190" role="img" aria-label="A game table with dice, cards and game pieces under a string of lights">
+      <!-- string of lights -->
+      <path d="M10 22 Q 110 58 210 26 T 410 22" fill="none" stroke="var(--wire)" stroke-width="3"/>
+      <g>
+        <ellipse cx="48" cy="44" rx="9" ry="12" fill="#ffd23f"/><ellipse cx="48" cy="44" rx="16" ry="18" fill="#ffd23f" opacity=".25"/>
+        <ellipse cx="98" cy="52" rx="9" ry="12" fill="#ff6b6b"/><ellipse cx="98" cy="52" rx="16" ry="18" fill="#ff6b6b" opacity=".25"/>
+        <ellipse cx="150" cy="50" rx="9" ry="12" fill="#4fd18b"/><ellipse cx="150" cy="50" rx="16" ry="18" fill="#4fd18b" opacity=".25"/>
+        <ellipse cx="200" cy="38" rx="9" ry="12" fill="#5ab4ff"/><ellipse cx="200" cy="38" rx="16" ry="18" fill="#5ab4ff" opacity=".25"/>
+        <ellipse cx="258" cy="26" rx="9" ry="12" fill="#c08bff"/><ellipse cx="258" cy="26" rx="16" ry="18" fill="#c08bff" opacity=".25"/>
+        <ellipse cx="312" cy="28" rx="9" ry="12" fill="#ffd23f"/><ellipse cx="312" cy="28" rx="16" ry="18" fill="#ffd23f" opacity=".25"/>
+        <ellipse cx="366" cy="34" rx="9" ry="12" fill="#ff6b6b"/><ellipse cx="366" cy="34" rx="16" ry="18" fill="#ff6b6b" opacity=".25"/>
+      </g>
+      <!-- table -->
+      <ellipse cx="210" cy="160" rx="190" ry="24" fill="var(--tableEdge)"/>
+      <ellipse cx="210" cy="154" rx="190" ry="24" fill="var(--table)"/>
+      <!-- cards fanned -->
+      <g transform="translate(70 104)">
+        <rect x="0" y="0" width="38" height="54" rx="5" fill="#fff" stroke="#c9cfe6" stroke-width="2" transform="rotate(-18 19 54)"/>
+        <rect x="0" y="0" width="38" height="54" rx="5" fill="#fff" stroke="#c9cfe6" stroke-width="2" transform="rotate(-4 19 54)"/>
+        <rect x="0" y="0" width="38" height="54" rx="5" fill="#fff" stroke="#c9cfe6" stroke-width="2" transform="rotate(12 19 54)"/>
+        <g transform="rotate(12 19 54)">
+          <path d="M19 18 C 12 10, 4 20, 19 32 C 34 20, 26 10, 19 18 Z" fill="#ff6b6b"/>
+        </g>
+      </g>
+      <!-- dice -->
+      <g class="bob">
+        <rect x="170" y="108" width="40" height="40" rx="8" fill="#fff" stroke="#c9cfe6" stroke-width="2"/>
+        <circle cx="181" cy="119" r="4" fill="#1d2a4d"/><circle cx="199" cy="137" r="4" fill="#1d2a4d"/><circle cx="190" cy="128" r="4" fill="#1d2a4d"/>
+      </g>
+      <g class="bob2">
+        <rect x="218" y="114" width="36" height="36" rx="7" fill="#ffd23f" transform="rotate(14 236 132)"/>
+        <g transform="rotate(14 236 132)">
+          <circle cx="227" cy="123" r="3.5" fill="#1d2a4d"/><circle cx="245" cy="123" r="3.5" fill="#1d2a4d"/>
+          <circle cx="227" cy="141" r="3.5" fill="#1d2a4d"/><circle cx="245" cy="141" r="3.5" fill="#1d2a4d"/>
+        </g>
+      </g>
+      <!-- pawns -->
+      <g>
+        <circle cx="296" cy="104" r="10" fill="#4fd18b"/>
+        <path d="M286 146 L 290 116 Q 296 110 302 116 L 306 146 Z" fill="#4fd18b"/>
+        <ellipse cx="296" cy="146" rx="14" ry="5" fill="#3bb574"/>
+      </g>
+      <g>
+        <circle cx="332" cy="112" r="9" fill="#5ab4ff"/>
+        <path d="M323 150 L 326 122 Q 332 117 338 122 L 341 150 Z" fill="#5ab4ff"/>
+        <ellipse cx="332" cy="150" rx="13" ry="5" fill="#3f95e0"/>
+      </g>
+      <!-- sparkles -->
+      <path d="M140 96 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#ffd23f"/>
+      <path d="M368 84 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z" fill="#c08bff"/>
+    </svg>
+    <h1 id="title">100 Nights of Game Night</h1>
+    <p class="count"><b id="n">0</b> of 100 lights on</p>
+  </header>
+
+  <div class="strands" id="strands" aria-label="100 nights"></div>
+
+  <div class="actions">
+    <button class="go" id="go" type="button">We played tonight!</button><br>
+    <button class="link" id="missedBtn" type="button">Add a night we forgot</button>
+    <p class="msg" id="msg" aria-live="polite"></p>
+  </div>
+
+  <ul class="miles" id="miles">
+    <li data-m="25">25</li><li data-m="50">50</li><li data-m="75">75</li><li data-m="100">100</li>
+  </ul>
+  <div class="party" id="party"></div>
+
+  <section class="games">
+    <h2>Games we’ve played</h2>
+    <ul class="tally" id="tally"></ul>
+    <p class="empty" id="tallyEmpty">Add a game when you light a bulb and it’ll show up here.</p>
+  </section>
+
+  <footer>
+    <button class="link" id="exportBtn" type="button">Export</button>
+    <button class="link" id="setBtn" type="button">Settings</button>
+    <div class="panel" id="exportPanel">
+      <p style="margin:0 0 10px">Save every night with its date and game.</p>
+      <div class="row" style="text-align:left;margin-top:0">
+        <button type="button" class="btn primary" id="csvBtn" style="margin:0 8px 8px 0">Download spreadsheet (CSV)</button>
+        <button type="button" class="btn" id="copyBtn" style="margin:0 0 8px 0">Copy as text</button>
+      </div>
+      <textarea id="exportText" readonly style="display:none;width:100%;height:160px;font:inherit;font-size:1rem;padding:8px;border-radius:10px;border:2px solid var(--wire);background:var(--off);color:var(--ink)"></textarea>
+      <p class="msg" id="exportMsg" style="text-align:left"></p>
+    </div>
+    <div class="panel" id="panel">
+      <label for="titleIn">Challenge name</label>
+      <input id="titleIn" maxlength="40">
+      <div class="row">
+        <button type="button" class="btn danger" id="resetBtn">Start over</button>
+        <button type="button" class="btn" id="saveTitle">Save</button>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<div class="veil" id="veil">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">Light up a night</h2>
+    <label for="dateIn">Which night?</label>
+    <input type="date" id="dateIn">
+    <label for="gameIn">What did you play?</label>
+    <input type="text" id="gameIn" maxlength="40" placeholder="Uno, Snakes and Ladders…">
+    <div class="chips" id="chips"></div>
+    <p class="warn" id="warn"></p>
+    <div class="row">
+      <button type="button" class="btn danger" id="delBtn">Turn off</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="cancelBtn">Cancel</button>
+      <button type="button" class="btn primary" id="saveBtn">Light it up</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var KEY = "hundred-nights-v1";
+  var state = { title: "100 Nights of Game Night", nights: [] };
+
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (raw) {
+      var s = JSON.parse(raw);
+      if (s && s.nights && s.nights.length !== undefined) {
+        state.title = s.title || state.title;
+        // older version stored plain date strings
+        for (var q = 0; q < s.nights.length; q++) {
+          var x = s.nights[q];
+          state.nights.push(typeof x === "string" ? { d: x, g: "" } : { d: x.d, g: x.g || "" });
+        }
+      }
+    }
+  } catch (e) {}
+
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function sortNights(){ state.nights.sort(function(a,b){ return a.d < b.d ? -1 : a.d > b.d ? 1 : 0; }); }
+  sortNights();
+
+  function pad(x){ return x < 10 ? "0" + x : "" + x; }
+  function iso(d){ return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()); }
+  function today(){ return iso(new Date()); }
+  function yesterday(){ var d = new Date(); d.setDate(d.getDate()-1); return iso(d); }
+  var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function pretty(s){ var p = s.split("-"); return MONTHS[parseInt(p[1],10)-1] + " " + parseInt(p[2],10); }
+  function indexOfDate(d){ for (var i = 0; i < state.nights.length; i++) if (state.nights[i].d === d) return i; return -1; }
+
+  // build bulbs
+  var strandsEl = document.getElementById("strands");
+  var bulbs = [];
+  for (var r = 0; r < 10; r++) {
+    var strand = document.createElement("div");
+    strand.className = "strand";
+    for (var c = 0; c < 10; c++) {
+      var i = r * 10 + c;
+      var slot = document.createElement("div");
+      slot.className = "slot";
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("data-i", i);
+      b.innerHTML = '<span class="glass"></span><span class="num">' + (i+1) + '</span>';
+      slot.appendChild(b);
+      strand.appendChild(slot);
+      bulbs.push(b);
+    }
+    strandsEl.appendChild(strand);
+  }
+
+  var goBtn = document.getElementById("go");
+  var msg = document.getElementById("msg");
+  var party = document.getElementById("party");
+  var CHEERS = {
+    25: "A quarter of the way! 25 nights of games \u2728",
+    50: "Halfway there! 50 game nights in the books \uD83C\uDF89",
+    75: "75 nights! The finish line is in sight \uD83D\uDE80",
+    100: "100 NIGHTS! You did it, champions! \uD83C\uDFC6"
+  };
+
+  function gameCounts(){
+    var map = {}, list = [];
+    for (var i = 0; i < state.nights.length; i++) {
+      var g = state.nights[i].g;
+      if (!g) continue;
+      var k = g.toLowerCase();
+      if (!map[k]) { map[k] = { name: g, n: 0 }; list.push(map[k]); }
+      map[k].n++;
+    }
+    list.sort(function(a,b){ return b.n - a.n; });
+    return list;
+  }
+
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+  function render(popIndex){
+    var n = state.nights.length;
+    document.getElementById("title").textContent = state.title;
+    document.title = state.title;
+    document.getElementById("n").textContent = n;
+    for (var i = 0; i < 100; i++) {
+      var b = bulbs[i];
+      var cls = "bulb c" + (i % 5);
+      if (i < n) { cls += " lit"; if (state.nights[i].g) cls += " noted"; }
+      if (i === n) cls += " next";
+      if (i === popIndex) cls += " pop";
+      b.className = cls;
+      b.setAttribute("aria-label", i < n
+        ? "Night " + (i+1) + ", " + pretty(state.nights[i].d) + (state.nights[i].g ? ", played " + state.nights[i].g : "")
+        : "Night " + (i+1) + ", not yet");
+    }
+    if (n >= 100) { goBtn.textContent = "All 100 lights on!"; goBtn.className = "go done"; }
+    else if (indexOfDate(today()) > -1) { goBtn.textContent = "Tonight\u2019s light is on \u2728"; goBtn.className = "go done"; }
+    else { goBtn.textContent = "We played tonight!"; goBtn.className = "go"; }
+
+    var lis = document.getElementById("miles").getElementsByTagName("li");
+    var best = 0;
+    for (var k = 0; k < lis.length; k++) {
+      var m = parseInt(lis[k].getAttribute("data-m"), 10);
+      lis[k].className = n >= m ? "got" : "";
+      if (n >= m) best = m;
+    }
+    if (best) { party.textContent = CHEERS[best]; party.className = "party show"; }
+    else party.className = "party";
+
+    var counts = gameCounts();
+    var tally = document.getElementById("tally");
+    var html = "";
+    var top = counts.length ? counts[0].n : 1;
+    for (var t = 0; t < counts.length && t < 8; t++) {
+      html += '<li><span class="name">' + esc(counts[t].name) + '</span><span class="bar"><span class="fill" style="display:block;width:' +
+        Math.round(counts[t].n / top * 100) + '%"></span></span><span class="x">\u00D7' + counts[t].n + '</span></li>';
+    }
+    tally.innerHTML = html;
+    document.getElementById("tallyEmpty").style.display = counts.length ? "none" : "block";
+  }
+
+  // ---- sheet ----
+  var veil = document.getElementById("veil");
+  var dateIn = document.getElementById("dateIn");
+  var gameIn = document.getElementById("gameIn");
+  var warn = document.getElementById("warn");
+  var delBtn = document.getElementById("delBtn");
+  var saveBtn = document.getElementById("saveBtn");
+  var editing = -1;
+
+  function openSheet(mode, idx){
+    editing = mode === "edit" ? idx : -1;
+    warn.textContent = "";
+    dateIn.max = today();
+    if (editing > -1) {
+      document.getElementById("sheetTitle").textContent = "Night " + (idx+1);
+      dateIn.value = state.nights[idx].d;
+      gameIn.value = state.nights[idx].g;
+      saveBtn.textContent = "Save";
+      delBtn.style.display = "inline-block";
+    } else {
+      document.getElementById("sheetTitle").textContent = mode === "missed" ? "Add a night we forgot" : "Light up tonight";
+      dateIn.value = mode === "missed" ? yesterday() : today();
+      gameIn.value = "";
+      saveBtn.textContent = "Light it up";
+      delBtn.style.display = "none";
+    }
+    var counts = gameCounts(), chips = "";
+    for (var i = 0; i < counts.length && i < 6; i++) chips += '<button type="button" class="chip">' + esc(counts[i].name) + '</button>';
+    document.getElementById("chips").innerHTML = chips;
+    veil.className = "veil show";
+  }
+  function closeSheet(){ veil.className = "veil"; }
+
+  document.getElementById("chips").onclick = function(e){
+    if (e.target && e.target.className === "chip") gameIn.value = e.target.textContent;
+  };
+  document.getElementById("cancelBtn").onclick = closeSheet;
+  veil.onclick = function(e){ if (e.target === veil) closeSheet(); };
+
+  saveBtn.onclick = function(){
+    var d = dateIn.value;
+    var g = gameIn.value.replace(/^\s+|\s+$/g, "");
+    if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) { warn.textContent = "Pick a date first."; return; }
+    if (d > today()) { warn.textContent = "That night hasn\u2019t happened yet!"; return; }
+    var dupe = indexOfDate(d);
+    if (dupe > -1 && dupe !== editing) { warn.textContent = pretty(d) + " already has a light (night " + (dupe+1) + ")."; return; }
+    if (editing > -1) {
+      state.nights[editing] = { d: d, g: g };
+    } else {
+      if (state.nights.length >= 100) { warn.textContent = "All 100 lights are already on!"; return; }
+      state.nights.push({ d: d, g: g });
+    }
+    sortNights(); save();
+    var at = indexOfDate(d);
+    render(editing > -1 ? -1 : at);
+    closeSheet();
+    var left = 100 - state.nights.length;
+    msg.textContent = editing > -1 ? "Night " + (at+1) + " updated."
+      : "Night " + (at+1) + " lit" + (g ? " with " + g : "") + "! " + (left > 0 ? left + " to go." : "That\u2019s all 100!");
+  };
+
+  delBtn.onclick = function(){
+    if (editing < 0) return;
+    if (confirm("Turn off the light for " + pretty(state.nights[editing].d) + "?")) {
+      state.nights.splice(editing, 1); save(); render(-1); closeSheet();
+      msg.textContent = "Light turned off.";
+    }
+  };
+
+  goBtn.onclick = function(){
+    if (state.nights.length >= 100) return;
+    var t = indexOfDate(today());
+    if (t > -1) { openSheet("edit", t); return; }
+    openSheet("tonight");
+  };
+  document.getElementById("missedBtn").onclick = function(){
+    if (state.nights.length >= 100) { msg.textContent = "All 100 lights are already on!"; return; }
+    openSheet("missed");
+  };
+
+  strandsEl.onclick = function(e){
+    var t = e.target;
+    while (t && t !== strandsEl && !(t.getAttribute && t.getAttribute("data-i") !== null)) t = t.parentNode;
+    if (!t || t === strandsEl) return;
+    var i = parseInt(t.getAttribute("data-i"), 10);
+    var n = state.nights.length;
+    if (i < n) openSheet("edit", i);
+    else if (i === n) openSheet(indexOfDate(today()) > -1 ? "missed" : "tonight");
+    else msg.textContent = (i + 1 - n) + " more nights until this light.";
+  };
+
+  // ---- settings ----
+  var panel = document.getElementById("panel");
+  var titleIn = document.getElementById("titleIn");
+  document.getElementById("setBtn").onclick = function(){
+    titleIn.value = state.title;
+    exportPanel.className = "panel";
+    panel.className = panel.className.indexOf("show") > -1 ? "panel" : "panel show";
+  };
+  document.getElementById("saveTitle").onclick = function(){
+    var v = titleIn.value.replace(/^\s+|\s+$/g, "");
+    if (v) state.title = v;
+    save(); render(-1); panel.className = "panel";
+  };
+  document.getElementById("resetBtn").onclick = function(){
+    if (confirm("Turn off all the lights and start over?")) {
+      state.nights = []; save(); render(-1); panel.className = "panel";
+      msg.textContent = "Fresh start! Night 1 is waiting.";
+    }
+  };
+
+  // ---- export ----
+  var exportPanel = document.getElementById("exportPanel");
+  var exportMsg = document.getElementById("exportMsg");
+  var exportText = document.getElementById("exportText");
+  var csvBtn = document.getElementById("csvBtn");
+
+
+  function csvCell(s){
+    s = String(s);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function buildCsv(){
+    var lines = ["Night,Date,Game"];
+    for (var i = 0; i < state.nights.length; i++)
+      lines.push((i+1) + "," + state.nights[i].d + "," + csvCell(state.nights[i].g));
+    return lines.join("\n") + "\n";
+  }
+  function buildText(){
+    var lines = [state.title, state.nights.length + " of 100 nights", ""];
+    for (var i = 0; i < state.nights.length; i++)
+      lines.push("Night " + (i+1) + " \u2013 " + pretty(state.nights[i].d) + (state.nights[i].g ? ": " + state.nights[i].g : ""));
+    return lines.join("\n");
+  }
+
+  document.getElementById("exportBtn").onclick = function(){
+    panel.className = "panel";
+    exportMsg.textContent = "";
+    exportText.style.display = "none";
+    exportPanel.className = exportPanel.className.indexOf("show") > -1 ? "panel" : "panel show";
+  };
+
+  csvBtn.onclick = function(){
+    if (!state.nights.length) { exportMsg.textContent = "Light a bulb first, then there\u2019s something to export."; return; }
+    var name = state.title.replace(/[^A-Za-z0-9 _-]/g, "").replace(/\s+/g, "-") || "100-nights";
+    try {
+      var blob = new Blob([buildCsv()], { type: "text/csv" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name + "-" + today() + ".csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+      exportMsg.textContent = "Spreadsheet saved.";
+    } catch (e) { exportMsg.textContent = "Downloads don\u2019t work here. Use Copy as text instead."; }
+  };
+
+  document.getElementById("copyBtn").onclick = function(){
+    if (!state.nights.length) { exportMsg.textContent = "Light a bulb first, then there\u2019s something to export."; return; }
+    exportText.value = buildText();
+    exportText.style.display = "block";
+    exportText.removeAttribute("readonly");
+    exportText.focus();
+    exportText.setSelectionRange(0, exportText.value.length);
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    exportText.setAttribute("readonly", "readonly");
+    exportMsg.textContent = ok ? "Copied! Paste it into Notes, a message or an email."
+                               : "Select the text above and tap Copy.";
+  };
+
+  render(-1);
+})();
+</script>
+</body>
+</html>
+
