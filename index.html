@@ -262,6 +262,13 @@ footer .link{margin:0}
 .gameRow input{flex:1;min-width:0}
 .gameRow .rm{flex:0 0 40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.1);color:var(--ink);font:inherit;font-size:1.4rem;line-height:1;cursor:pointer}
 .addGame{font:inherit;font-weight:700;font-size:1rem;margin:10px 0 0;padding:6px 14px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.55);background:transparent;color:var(--ink);cursor:pointer}
+
+/* ---- sync status ---- */
+.sync{text-align:center;font-size:.95rem;color:#fff;margin:10px 0 0;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.sync .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#ffb347;margin-right:7px;vertical-align:middle;box-shadow:0 0 6px rgba(255,179,71,.8)}
+.sync.on .dot{background:#3ddc84;box-shadow:0 0 8px rgba(61,220,132,.9)}
+.famNote{margin:6px 0 0;font-size:.9rem;color:var(--soft)}
+#famIn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1rem}
 </style>
 </head>
 <body>
@@ -286,6 +293,7 @@ footer .link{margin:0}
   </ul>
   <div class="party" id="party"></div>
     <p class="count tally-count"><b id="n">0</b> of 100 lights on</p>
+  <p class="sync" id="sync"><span class="dot"></span><span id="syncText">Saved on this device only</span></p>
   </section>
 
   <section class="games">
@@ -309,6 +317,9 @@ footer .link{margin:0}
     <div class="panel" id="panel">
       <label for="titleIn">Challenge name</label>
       <input id="titleIn" maxlength="40">
+      <label for="famIn" style="margin-top:16px">Family code</label>
+      <input id="famIn" maxlength="60" autocomplete="off" spellcheck="false" placeholder="fam-\u2026">
+      <p class="famNote" id="famNote">Phones with the same family code share the same lights.</p>
       <div class="row">
         <button type="button" class="btn danger" id="resetBtn">Start over</button>
         <button type="button" class="btn" id="saveTitle">Save</button>
@@ -336,8 +347,19 @@ footer .link{margin:0}
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 (function(){
+  // ---- Firebase project (from Project settings \u2192 Your apps) ----
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAay_usXWb7Aw_Q0pEzjOJHoC8ETypOiwM",
+    authDomain: "game-night-1b980.firebaseapp.com",
+    projectId: "game-night-1b980",
+    storageBucket: "game-night-1b980.firebasestorage.app",
+    messagingSenderId: "941556296349",
+    appId: "1:941556296349:web:717e8f6cafc7acaa948274"
+  };
   var KEY = "hundred-nights-v1";
   var MAX_GAMES = 5;
   function clean(s){ return String(s).replace(/^\s+|\s+$/g, ""); }
@@ -373,6 +395,71 @@ footer .link{margin:0}
   } catch (e) {}
 
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  // ---- family sync (Firebase) ----
+  var FAM_KEY = "hundred-nights-family";
+  var family = "", fam = null, unsub = [];
+  function validFamily(c){ return /^[A-Za-z0-9_-]{20,60}$/.test(c || ""); }
+  function readFamily(){
+    var m = /[#&]family=([A-Za-z0-9_-]+)/.exec(location.hash || "");
+    if (m && validFamily(m[1])) {
+      try { localStorage.setItem(FAM_KEY, m[1]); } catch (e) {}
+      try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+      return m[1];
+    }
+    try { var s = localStorage.getItem(FAM_KEY); if (validFamily(s)) return s; } catch (e) {}
+    return "";
+  }
+  function cloudPut(n){ if (fam) fam.collection("nights").doc(n.d).set({ d: n.d, g: n.g }).then(null, cloudFailed); }
+  function cloudDel(d){ if (fam) fam.collection("nights").doc(d).delete().then(null, cloudFailed); }
+  function cloudTitle(t){ if (fam) fam.collection("meta").doc("settings").set({ title: t }).then(null, cloudFailed); }
+  function cloudFailed(){ setSync(false, "Couldn\u2019t reach the family tracker. Saved on this device for now."); }
+
+  function connectFamily(){
+    for (var u = 0; u < unsub.length; u++) unsub[u]();
+    unsub = []; fam = null;
+    if (!family) { setSync(false, "Saved on this device only"); return; }
+    if (!FIREBASE_CONFIG || !window.firebase) { setSync(false, "Sync isn\u2019t set up yet. Saved on this device only."); return; }
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      fam = firebase.firestore().collection("families").doc(family);
+    } catch (e) { fam = null; setSync(false, "Sync isn\u2019t working. Saved on this device only."); return; }
+    setSync(false, "Connecting to the family tracker\u2026");
+    var first = true;
+    unsub.push(fam.collection("nights").onSnapshot(function(snap){
+      var list = [], have = {};
+      snap.forEach(function(doc){
+        var x = doc.data();
+        if (x && typeof x.d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x.d)) { list.push({ d: x.d, g: toGames(x.g) }); have[x.d] = 1; }
+      });
+      if (first && !snap.metadata.fromCache) {
+        first = false;
+        // first time this phone joins: send up any lights it had on its own
+        var mergedKey = "hundred-nights-merged-" + family, merged = false;
+        try { merged = localStorage.getItem(mergedKey) === "1"; } catch (e) {}
+        if (!merged) {
+          for (var i = 0; i < state.nights.length && list.length < 100; i++) {
+            var n = state.nights[i];
+            if (!have[n.d]) { list.push(n); have[n.d] = 1; cloudPut(n); }
+          }
+          try { localStorage.setItem(mergedKey, "1"); } catch (e) {}
+        }
+      }
+      var before = state.nights.length;
+      state.nights = list; sortNights(); save();
+      render(!snap.metadata.hasPendingWrites && list.length === before + 1 ? indexOfDate(newestAdded(snap)) : -1);
+      if (!snap.metadata.fromCache) setSync(true, "Synced with the family");
+    }, function(){ setSync(false, "Couldn\u2019t reach the family tracker. Check the family code in Settings."); }));
+    unsub.push(fam.collection("meta").doc("settings").onSnapshot(function(doc){
+      var x = doc.exists ? doc.data() : null;
+      if (x && typeof x.title === "string" && x.title) { state.title = x.title.slice(0, 40); save(); render(-1); }
+    }, function(){}));
+  }
+  function newestAdded(snap){
+    var ch = snap.docChanges(), d = "";
+    for (var i = 0; i < ch.length; i++) if (ch[i].type === "added") d = ch[i].doc.id;
+    return d;
+  }
   function sortNights(){ state.nights.sort(function(a,b){ return a.d < b.d ? -1 : a.d > b.d ? 1 : 0; }); }
   sortNights();
 
@@ -563,6 +650,7 @@ footer .link{margin:0}
     if (d > today()) { warn.textContent = "That night hasn\u2019t happened yet!"; return; }
     var dupe = indexOfDate(d);
     if (dupe > -1 && dupe !== editing) { warn.textContent = pretty(d) + " already has a light (night " + (dupe+1) + ")."; return; }
+    var oldDate = editing > -1 ? state.nights[editing].d : "";
     if (editing > -1) {
       state.nights[editing] = { d: d, g: g };
     } else {
@@ -570,6 +658,8 @@ footer .link{margin:0}
       state.nights.push({ d: d, g: g });
     }
     sortNights(); save();
+    cloudPut({ d: d, g: g });
+    if (oldDate && oldDate !== d) cloudDel(oldDate);
     var at = indexOfDate(d);
     render(editing > -1 ? -1 : at);
     closeSheet();
@@ -581,7 +671,8 @@ footer .link{margin:0}
   delBtn.onclick = function(){
     if (editing < 0) return;
     if (confirm("Turn off the light for " + pretty(state.nights[editing].d) + "?")) {
-      state.nights.splice(editing, 1); save(); render(-1); closeSheet();
+      var gone = state.nights[editing].d;
+      state.nights.splice(editing, 1); save(); cloudDel(gone); render(-1); closeSheet();
       msg.textContent = "Light turned off.";
     }
   };
@@ -611,18 +702,30 @@ footer .link{margin:0}
   // ---- settings ----
   var panel = document.getElementById("panel");
   var titleIn = document.getElementById("titleIn");
+  var famIn = document.getElementById("famIn");
+  var famNote = document.getElementById("famNote");
   document.getElementById("setBtn").onclick = function(){
     titleIn.value = state.title;
+    famIn.value = family;
     exportPanel.className = "panel";
     panel.className = panel.className.indexOf("show") > -1 ? "panel" : "panel show";
   };
   document.getElementById("saveTitle").onclick = function(){
     var v = titleIn.value.replace(/^\s+|\s+$/g, "");
-    if (v) state.title = v;
+    if (v && v !== state.title) { state.title = v; cloudTitle(v); }
+    var f = famIn.value.replace(/\s+/g, "");
+    if (f !== family) {
+      if (f && !validFamily(f)) { famNote.textContent = "That code doesn\u2019t look right. It should start with fam- and be at least 20 characters."; return; }
+      family = f;
+      try { if (f) localStorage.setItem(FAM_KEY, f); else localStorage.removeItem(FAM_KEY); } catch (e) {}
+      connectFamily();
+    }
+    famNote.textContent = "Phones with the same family code share the same lights.";
     save(); render(-1); panel.className = "panel";
   };
   document.getElementById("resetBtn").onclick = function(){
     if (confirm("Turn off all the lights and start over?")) {
+      for (var r = 0; r < state.nights.length; r++) cloudDel(state.nights[r].d);
       state.nights = []; save(); render(-1); panel.className = "panel";
       msg.textContent = "Fresh start! Night 1 is waiting.";
     }
@@ -687,7 +790,12 @@ footer .link{margin:0}
                                : "Select the text above and tap Copy.";
   };
 
+  var syncEl = document.getElementById("sync"), syncText = document.getElementById("syncText");
+  function setSync(on, text){ syncEl.className = on ? "sync on" : "sync"; syncText.textContent = text; }
+
   render(-1);
+  family = readFamily();
+  connectFamily();
 })();
 </script>
 </body>
