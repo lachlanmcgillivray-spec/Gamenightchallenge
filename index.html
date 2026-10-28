@@ -375,7 +375,7 @@ footer .link{margin:0}
   <div class="party" id="party"></div>
     <p class="count tally-count"><b id="n">0</b> of 100 lights on</p>
   <p class="sync" id="sync"><span class="dot"></span><span id="syncText">Saved on this device only</span></p>
-  <p class="ver" id="ver">Version Oct 28b · family code <span id="verFam">none</span></p>
+  <p class="ver" id="ver">Version Oct 28c · family code <span id="verFam">none</span></p>
   <p class="streak" id="streak"></p>
   </section>
 
@@ -597,7 +597,11 @@ footer .link{margin:0}
   function cloudGame(g){ if (fam) fam.collection("games").doc(gameId(g.n)).set(g).then(null, cloudFailed); }
   function cloudGameDel(name){ if (fam) fam.collection("games").doc(gameId(name)).delete().then(null, cloudFailed); }
   function cloudTitle(t){ if (fam) fam.collection("meta").doc("settings").set({ title: t }).then(null, cloudFailed); }
-  function cloudFailed(){ setSync(false, "Couldn\u2019t reach the family tracker. Saved on this device for now."); }
+  var writeError = "";
+  function cloudFailed(err){
+    writeError = (err && err.code) || "unknown";
+    setSync(false, "Couldn\u2019t save to the family tracker (" + writeError + "). Saved on this device for now.");
+  }
 
   function connectFamily(){
     for (var u = 0; u < unsub.length; u++) unsub[u]();
@@ -608,12 +612,18 @@ footer .link{margin:0}
       if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
       fam = firebase.firestore().collection("families").doc(family);
     } catch (e) { fam = null; setSync(false, "Sync isn\u2019t working. Saved on this device only."); return; }
+    writeError = "";
     setSync(false, "Connecting to the family tracker\u2026");
+    try {
+      if (state.nights.length || state.custom.length)
+        localStorage.setItem("hundred-nights-safety-copy", JSON.stringify({ saved: new Date().toISOString(), nights: state.nights, custom: state.custom }));
+    } catch (e) {}
     var first = true, gamesFirst = true;
     unsub.push(fam.collection("games").onSnapshot(function(snap){
       var list = [];
       snap.forEach(function(doc){ var g = cleanCustom(doc.data()); if (g) list.push(g); });
-      if (gamesFirst && !snap.metadata.fromCache) {
+      if (gamesFirst && snap.metadata.fromCache) return;
+      if (gamesFirst) {
         gamesFirst = false;
         // first time this phone joins: send up any games it had added on its own
         var mergedKey = "hundred-nights-games-merged-" + family, merged = false;
@@ -635,7 +645,9 @@ footer .link{margin:0}
         var x = doc.data();
         if (x && typeof x.d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x.d)) { list.push({ d: x.d, g: toGames(x.g) }); have[x.d] = 1; }
       });
-      if (first && !snap.metadata.fromCache) {
+      // wait for the family tracker's real answer before changing anything on this device
+      if (first && snap.metadata.fromCache) return;
+      if (first) {
         first = false;
         // first time this phone joins: send up any lights it had on its own
         var mergedKey = "hundred-nights-merged-" + family, merged = false;
@@ -652,7 +664,7 @@ footer .link{margin:0}
       state.nights = list; sortNights(); save();
       if (!gamesFirst) addPlayedGames(allPlayedNames());
       render(!snap.metadata.hasPendingWrites && list.length === before + 1 ? indexOfDate(newestAdded(snap)) : -1);
-      if (!snap.metadata.fromCache) setSync(true, "Synced with the family");
+      if (!snap.metadata.fromCache && !writeError) setSync(true, "Synced with the family \u00B7 " + list.length + " light" + (list.length === 1 ? "" : "s"));
     }, function(){ setSync(false, "Couldn\u2019t reach the family tracker. Check the family code in Settings."); }));
     unsub.push(fam.collection("meta").doc("settings").onSnapshot(function(doc){
       var x = doc.exists ? doc.data() : null;
