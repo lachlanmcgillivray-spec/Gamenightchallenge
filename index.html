@@ -334,6 +334,19 @@ footer .link{margin:0}
 .collList{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;max-height:260px;overflow-y:auto}
 .collChip{font-size:.92rem;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3)}
 @media (prefers-reduced-motion: reduce){ .badge.fresh{-webkit-animation:none;animation:none} }
+
+/* ---- our own games ---- */
+.collBtns{display:flex;flex-wrap:wrap;gap:8px}
+.addOwn{background:rgba(255,179,71,.25);border-color:rgba(255,200,120,.8)}
+.ownHead{margin:16px 0 8px;font-size:1.1rem;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.ownHead .sub{font-size:.9rem;font-weight:600;color:var(--soft);margin-left:4px}
+.ownList{display:flex;flex-wrap:wrap;gap:6px}
+.ownChip{font:inherit;font-size:.95rem;font-weight:700;padding:4px 12px;border-radius:999px;cursor:pointer;color:#fff;
+  background:rgba(255,179,71,.18);border:1px solid rgba(255,200,120,.7);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.ownChip span{font-weight:500;font-size:.82rem;color:var(--soft)}
+.ownChip.off{opacity:.6;border-style:dashed}
+.ownGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ownGrid label{font-size:.92rem !important}
 </style>
 </head>
 <body>
@@ -372,8 +385,13 @@ footer .link{margin:0}
     <h2>Our collection</h2>
     <p class="collLine"><b id="collPlayed">0</b> of <span id="collTotal">0</span> games played</p>
     <div class="collBar"><span id="collFill"></span></div>
-    <button type="button" class="collToggle" id="collToggle" aria-expanded="false">Show games we haven&rsquo;t played yet</button>
+    <div class="collBtns">
+      <button type="button" class="collToggle" id="collToggle" aria-expanded="false">Show games we haven&rsquo;t played yet</button>
+      <button type="button" class="collToggle addOwn" id="addOwnBtn">+ Add a game</button>
+    </div>
     <div class="collList" id="collList" hidden></div>
+    <h3 class="ownHead" id="ownHead" hidden>Our own games <span class="sub">tap one to edit</span></h3>
+    <div class="ownList" id="ownList"></div>
   </section>
 
   <section class="games">
@@ -409,6 +427,27 @@ footer .link{margin:0}
 </div>
 
 <datalist id="collNames"></datalist>
+<div class="veil" id="ownVeil">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ownTitle">
+    <h2 id="ownTitle">Add a game</h2>
+    <label for="ownName">Game name</label>
+    <input type="text" id="ownName" maxlength="40" autocomplete="off" placeholder="Our new favourite">
+    <div class="ownGrid">
+      <div><label for="ownMin">Min players</label><input type="number" id="ownMin" min="1" max="30" inputmode="numeric" placeholder="2"></div>
+      <div><label for="ownMax">Max players</label><input type="number" id="ownMax" min="1" max="30" inputmode="numeric" placeholder="6"></div>
+      <div><label for="ownTime">Minutes</label><input type="number" id="ownTime" min="1" max="600" inputmode="numeric" placeholder="20"></div>
+    </div>
+    <p class="famNote">Players and minutes are optional. They let the spinner&rsquo;s filters include this game.</p>
+    <p class="warn" id="ownWarn"></p>
+    <div class="row">
+      <button type="button" class="btn danger" id="ownDel">Remove</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="ownCancel">Cancel</button>
+      <button type="button" class="btn primary" id="ownSave">Add game</button>
+    </div>
+  </div>
+</div>
+
 <div class="veil" id="spinVeil">
   <div class="sheet spinSheet" role="dialog" aria-modal="true" aria-labelledby="spinTitle">
     <h2 id="spinTitle">What are we playing?</h2>
@@ -490,7 +529,24 @@ footer .link{margin:0}
     return out;
   }
   function gamesText(n, sep){ return n.g.join(sep || ", "); }
-  var state = { title: "100 Nights of Game Night", nights: [] };
+
+  // games the family adds that aren't in the BoardGameGeek list
+  // { n: name, min: players, max: players, t: minutes, off: true when taken off the wheel }
+  function num(v, lo, hi){ v = parseInt(v, 10); return v >= lo && v <= hi ? v : null; }
+  function cleanCustom(x){
+    if (!x || typeof x.n !== "string") return null;
+    var n = clean(x.n).slice(0, 40);
+    if (!n) return null;
+    var min = num(x.min, 1, 30), max = num(x.max, 1, 30);
+    if (min && max && max < min) { var sw = min; min = max; max = sw; }
+    return { n: n, min: min, max: max, t: num(x.t, 1, 600), off: x.off === true };
+  }
+  function gameId(name){
+    var k = name.toLowerCase(), slug = k.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60), h = 0;
+    for (var i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+    return (slug || "game") + "-" + h.toString(36);
+  }
+  var state = { title: "100 Nights of Game Night", nights: [], custom: [] };
 
   try {
     var raw = localStorage.getItem(KEY);
@@ -503,6 +559,8 @@ footer .link{margin:0}
           var x = s.nights[q];
           state.nights.push(typeof x === "string" ? { d: x, g: [] } : { d: x.d, g: toGames(x.g) });
         }
+        if (s.custom && s.custom.length !== undefined)
+          for (var cq = 0; cq < s.custom.length; cq++) { var cg = cleanCustom(s.custom[cq]); if (cg) state.custom.push(cg); }
       }
     }
   } catch (e) {}
@@ -528,6 +586,8 @@ footer .link{margin:0}
   }
   function cloudPut(n){ if (fam) fam.collection("nights").doc(n.d).set({ d: n.d, g: n.g }).then(null, cloudFailed); }
   function cloudDel(d){ if (fam) fam.collection("nights").doc(d).delete().then(null, cloudFailed); }
+  function cloudGame(g){ if (fam) fam.collection("games").doc(gameId(g.n)).set(g).then(null, cloudFailed); }
+  function cloudGameDel(name){ if (fam) fam.collection("games").doc(gameId(name)).delete().then(null, cloudFailed); }
   function cloudTitle(t){ if (fam) fam.collection("meta").doc("settings").set({ title: t }).then(null, cloudFailed); }
   function cloudFailed(){ setSync(false, "Couldn\u2019t reach the family tracker. Saved on this device for now."); }
 
@@ -541,7 +601,26 @@ footer .link{margin:0}
       fam = firebase.firestore().collection("families").doc(family);
     } catch (e) { fam = null; setSync(false, "Sync isn\u2019t working. Saved on this device only."); return; }
     setSync(false, "Connecting to the family tracker\u2026");
-    var first = true;
+    var first = true, gamesFirst = true;
+    unsub.push(fam.collection("games").onSnapshot(function(snap){
+      var list = [];
+      snap.forEach(function(doc){ var g = cleanCustom(doc.data()); if (g) list.push(g); });
+      if (gamesFirst && !snap.metadata.fromCache) {
+        gamesFirst = false;
+        // first time this phone joins: send up any games it had added on its own
+        var mergedKey = "hundred-nights-games-merged-" + family, merged = false;
+        try { merged = localStorage.getItem(mergedKey) === "1"; } catch (e) {}
+        if (!merged) {
+          var have = {};
+          for (var i = 0; i < list.length; i++) have[list[i].n.toLowerCase()] = 1;
+          for (var j = 0; j < state.custom.length; j++)
+            if (!have[state.custom[j].n.toLowerCase()]) { list.push(state.custom[j]); cloudGame(state.custom[j]); }
+          try { localStorage.setItem(mergedKey, "1"); } catch (e) {}
+        }
+      }
+      state.custom = list; save();
+      rebuildCollection(); render(-1);
+    }, function(){}));
     unsub.push(fam.collection("nights").onSnapshot(function(snap){
       var list = [], have = {};
       snap.forEach(function(doc){
@@ -563,6 +642,7 @@ footer .link{margin:0}
       }
       var before = state.nights.length;
       state.nights = list; sortNights(); save();
+      if (!gamesFirst) addPlayedGames(allPlayedNames());
       render(!snap.metadata.hasPendingWrites && list.length === before + 1 ? indexOfDate(newestAdded(snap)) : -1);
       if (!snap.metadata.fromCache) setSync(true, "Synced with the family");
     }, function(){ setSync(false, "Couldn\u2019t reach the family tracker. Check the family code in Settings."); }));
@@ -707,6 +787,18 @@ footer .link{margin:0}
     }
     document.getElementById("badges").innerHTML = html;
     document.getElementById("badgeCount").textContent = got + " of " + BADGES.length;
+    // our own games
+    var oh = "", sorted = state.custom.slice().sort(function(a, b){ return a.n.toLowerCase() < b.n.toLowerCase() ? -1 : 1; });
+    for (i = 0; i < sorted.length; i++) {
+      var c = sorted[i], bits = [];
+      if (c.min || c.max) bits.push(c.min && c.max ? (c.min === c.max ? c.min : c.min + "\u2013" + c.max) + "p" : (c.min ? c.min + "+p" : "up to " + c.max + "p"));
+      if (c.t) bits.push(c.t + " min");
+      if (c.off) bits.push("off the spinner");
+      oh += '<button type="button" class="ownChip' + (c.off ? " off" : "") + '" data-k="' + esc(c.n) + '">' + esc(c.n) +
+        (bits.length ? ' <span>' + bits.join(" \u00B7 ") + '</span>' : '') + '</button>';
+    }
+    document.getElementById("ownList").innerHTML = oh;
+    document.getElementById("ownHead").hidden = !sorted.length;
     // collection
     document.getElementById("collPlayed").textContent = s.owned;
     document.getElementById("collTotal").textContent = COLLECTION.length;
@@ -862,7 +954,9 @@ footer .link{margin:0}
       if (state.nights.length >= 100) { warn.textContent = "All 100 lights are already on!"; return; }
       state.nights.push({ d: d, g: g });
     }
-    sortNights(); save();
+    sortNights();
+    addPlayedGames(g);
+    save();
     cloudPut({ d: d, g: g });
     if (oldDate && oldDate !== d) cloudDel(oldDate);
     var at = indexOfDate(d);
@@ -1009,7 +1103,45 @@ footer .link{margin:0}
 
   // ---- game spinner ----
   // name, min players, max players, minutes, suggested age (from BoardGameGeek)
-  var COLLECTION = [["Anarchy Pancakes",2,6,5,6],["Arschmallows",2,6,45,8],["Bananagrams",1,8,15,8],["The Bears and the Bees",2,5,30,6],["Bears vs Babies",2,5,20,8],["The Best Worst Ice Cream",2,5,10,3],["Butts on Things",2,4,20,5],["Cards Against Humanity",4,30,30,16],["Chomp!",2,5,20,5],["Clue: Card Game",3,4,15,8],["Codenames",2,8,15,10],["Codenames: Deep Undercover",4,8,15,16],["Codenames: Duet",2,2,30,12],["Connect Four",2,2,10,5],["Count Your Chickens!",2,4,15,3],["CuBirds",2,5,20,8],["Deduckto",2,4,15,6],["Deer in the Headlights Game",2,6,30,6],["Dog Man: Attack of The Fleas",2,6,null,4],["Dog Man: Flip-O-Rama Game",2,4,null,null],["Dog Man: The Hot Dog Card Game",2,4,null,4],["Dumb Ways to Die",2,5,30,8],["Exploding Kittens",2,5,15,8],["Exploding Kittens: Good vs Evil",2,5,15,6],["Exploding Minions",2,5,15,6],["Fart!",3,6,30,null],["The Floor is Lava",2,6,null,3],["Forbidden Island",2,4,30,8],["Go Nuts for Donuts",2,6,20,6],["GUBS: A Game of Wit and Luck",2,6,20,8],["Guess Who?",2,2,20,4],["Guess Who?: Card Game",2,2,null,4],["Hand-to-Hand Wombat",3,6,15,8],["Happy City",2,5,30,8],["Happy Little Dinosaurs",2,4,60,8],["Happy Salmon",3,8,2,5],["Hisss",2,5,15,3],["Hoot Owl Hoot!",2,4,15,3],["Hoppy Salmon",3,6,2,null],["Hurry Up Chicken Butt",2,6,2,2],["Irr-elephant",1,4,10,null],["Kalah",2,2,10,6],["L.L.A.M.A.",2,6,20,6],["Little Secret",3,9,45,null],["A Little Wordy",2,2,15,8],["Llamas Unleashed",2,8,45,10],["The Logo Board Game",2,6,40,14],["Long Cow",2,5,20,5],["Loose Caboose!",2,4,15,8],["Loot",2,8,20,6],["Mantis",2,6,10,6],["MINDJOB",2,8,30,null],["Monopoly Deal Pocket",2,3,15,8],["Monster Rejects",2,5,null,18],["My First Bananagrams",1,4,20,6],["Oh My Pigeons!",2,5,15,6],["On a Scale of One to T-Rex",2,8,15,6],["Outfoxed!",2,4,20,4],["Pete the Cat: Pizza Pie Game",2,4,null,null],["Phase 10",2,6,45,8],["Poetry for Neanderthals",2,12,15,8],["Power Hungry Pets",2,6,15,8],["Quiddler",1,8,30,8],["Rainbow Bunny Bop",2,4,60,5],["Ransom Notes",3,6,90,12],["Rat-a-Tat Cat",2,6,10,5],["Really Loud Librarians",2,12,20,8],["Rory's Story Cubes",1,12,20,4],["S'quarrels: A Game of Absolute Nuts",2,6,20,6],["SET",1,20,30,6],["Seven Families",2,4,30,null],["Skull",3,6,45,8],["Slamwich",2,6,20,4],["Slap Dragon",2,2,30,null],["Sleeping Queens",2,5,20,5],["Sorry!",2,4,30,5],["Spot it!",2,8,15,4],["Stay Cool",3,7,25,12],["Stone Soup",2,6,15,3],["Sushi Go!",2,5,15,6],["Taco Cat Goat Cheese Pizza",2,8,30,6],["Taco Kitten Pizza",2,6,5,4],["Taco vs Burrito",2,4,45,6],["Tacocat Spelled Backwards",2,2,20,6],["Telestrations: 12 Player Party Pack",4,12,30,8],["That Escalated Quickly",2,8,15,8],["That Sound Game",2,30,120,12],["There's a Moose in the House",2,5,15,5],["Throw Throw Avocado",2,6,15,4],["Throw Throw Burrito",2,6,15,8],["Trash Pandas",2,4,20,6],["Trivial Pursuit: Classic Edition",2,6,90,10],["Trouble",2,4,45,4],["UNO",2,10,30,5],["UNO: Show 'Em No Mercy",2,6,30,6],["UNO: Super Mario",2,10,null,6],["Unstable Unicorns",2,8,60,8],["Wig Out!",2,6,12,4],["Wild Kratts Race Around the World",2,4,null,3],["You Can't Say \"Umm\"",4,12,20,8],["You Lying Sack",2,5,15,null],["You've Got Crabs",4,10,20,8],["Zeus on the Loose",2,5,15,8],["Zombie Kittens",2,5,15,10]];
+  var BGG = [["Anarchy Pancakes",2,6,5,6],["Arschmallows",2,6,45,8],["Bananagrams",1,8,15,8],["The Bears and the Bees",2,5,30,6],["Bears vs Babies",2,5,20,8],["The Best Worst Ice Cream",2,5,10,3],["Butts on Things",2,4,20,5],["Cards Against Humanity",4,30,30,16],["Chomp!",2,5,20,5],["Clue: Card Game",3,4,15,8],["Codenames",2,8,15,10],["Codenames: Deep Undercover",4,8,15,16],["Codenames: Duet",2,2,30,12],["Connect Four",2,2,10,5],["Count Your Chickens!",2,4,15,3],["CuBirds",2,5,20,8],["Deduckto",2,4,15,6],["Deer in the Headlights Game",2,6,30,6],["Dog Man: Attack of The Fleas",2,6,null,4],["Dog Man: Flip-O-Rama Game",2,4,null,null],["Dog Man: The Hot Dog Card Game",2,4,null,4],["Dumb Ways to Die",2,5,30,8],["Exploding Kittens",2,5,15,8],["Exploding Kittens: Good vs Evil",2,5,15,6],["Exploding Minions",2,5,15,6],["Fart!",3,6,30,null],["The Floor is Lava",2,6,null,3],["Forbidden Island",2,4,30,8],["Go Nuts for Donuts",2,6,20,6],["GUBS: A Game of Wit and Luck",2,6,20,8],["Guess Who?",2,2,20,4],["Guess Who?: Card Game",2,2,null,4],["Hand-to-Hand Wombat",3,6,15,8],["Happy City",2,5,30,8],["Happy Little Dinosaurs",2,4,60,8],["Happy Salmon",3,8,2,5],["Hisss",2,5,15,3],["Hoot Owl Hoot!",2,4,15,3],["Hoppy Salmon",3,6,2,null],["Hurry Up Chicken Butt",2,6,2,2],["Irr-elephant",1,4,10,null],["Kalah",2,2,10,6],["L.L.A.M.A.",2,6,20,6],["Little Secret",3,9,45,null],["A Little Wordy",2,2,15,8],["Llamas Unleashed",2,8,45,10],["The Logo Board Game",2,6,40,14],["Long Cow",2,5,20,5],["Loose Caboose!",2,4,15,8],["Loot",2,8,20,6],["Mantis",2,6,10,6],["MINDJOB",2,8,30,null],["Monopoly Deal Pocket",2,3,15,8],["Monster Rejects",2,5,null,18],["My First Bananagrams",1,4,20,6],["Oh My Pigeons!",2,5,15,6],["On a Scale of One to T-Rex",2,8,15,6],["Outfoxed!",2,4,20,4],["Pete the Cat: Pizza Pie Game",2,4,null,null],["Phase 10",2,6,45,8],["Poetry for Neanderthals",2,12,15,8],["Power Hungry Pets",2,6,15,8],["Quiddler",1,8,30,8],["Rainbow Bunny Bop",2,4,60,5],["Ransom Notes",3,6,90,12],["Rat-a-Tat Cat",2,6,10,5],["Really Loud Librarians",2,12,20,8],["Rory's Story Cubes",1,12,20,4],["S'quarrels: A Game of Absolute Nuts",2,6,20,6],["SET",1,20,30,6],["Seven Families",2,4,30,null],["Skull",3,6,45,8],["Slamwich",2,6,20,4],["Slap Dragon",2,2,30,null],["Sleeping Queens",2,5,20,5],["Sorry!",2,4,30,5],["Spot it!",2,8,15,4],["Stay Cool",3,7,25,12],["Stone Soup",2,6,15,3],["Sushi Go!",2,5,15,6],["Taco Cat Goat Cheese Pizza",2,8,30,6],["Taco Kitten Pizza",2,6,5,4],["Taco vs Burrito",2,4,45,6],["Tacocat Spelled Backwards",2,2,20,6],["Telestrations: 12 Player Party Pack",4,12,30,8],["That Escalated Quickly",2,8,15,8],["That Sound Game",2,30,120,12],["There's a Moose in the House",2,5,15,5],["Throw Throw Avocado",2,6,15,4],["Throw Throw Burrito",2,6,15,8],["Trash Pandas",2,4,20,6],["Trivial Pursuit: Classic Edition",2,6,90,10],["Trouble",2,4,45,4],["UNO",2,10,30,5],["UNO: Show 'Em No Mercy",2,6,30,6],["UNO: Super Mario",2,10,null,6],["Unstable Unicorns",2,8,60,8],["Wig Out!",2,6,12,4],["Wild Kratts Race Around the World",2,4,null,3],["You Can't Say \"Umm\"",4,12,20,8],["You Lying Sack",2,5,15,null],["You've Got Crabs",4,10,20,8],["Zeus on the Loose",2,5,15,8],["Zombie Kittens",2,5,15,10]];
+  var BGG_NAMES = {};
+  for (var bi = 0; bi < BGG.length; bi++) BGG_NAMES[BGG[bi][0].toLowerCase()] = 1;
+  var COLLECTION = BGG.slice();
+  function findCustom(name){
+    var k = name.toLowerCase();
+    for (var i = 0; i < state.custom.length; i++) if (state.custom[i].n.toLowerCase() === k) return i;
+    return -1;
+  }
+  function knownGame(name){ return BGG_NAMES[name.toLowerCase()] || findCustom(name) > -1; }
+  function allPlayedNames(){
+    var out = [];
+    for (var i = 0; i < state.nights.length; i++) out = out.concat(state.nights[i].g);
+    return out;
+  }
+  // any game typed into a night that the collection doesn't know yet joins it
+  function addPlayedGames(names){
+    var added = false;
+    for (var i = 0; i < names.length; i++) {
+      if (knownGame(names[i])) continue;
+      var g = { n: names[i], min: null, max: null, t: null, off: false };
+      state.custom.push(g); cloudGame(g); added = true;
+    }
+    if (added) { save(); rebuildCollection(); }
+  }
+  function rebuildCollection(){
+    COLLECTION = BGG.slice();
+    for (var i = 0; i < state.custom.length; i++) {
+      var c = state.custom[i];
+      if (!c.off && !BGG_NAMES[c.n.toLowerCase()]) COLLECTION.push([c.n, c.min, c.max, c.t, null, true]);
+    }
+    var names = [];
+    for (var j = 0; j < BGG.length; j++) names.push(BGG[j][0]);
+    for (var k = 0; k < state.custom.length; k++) if (!BGG_NAMES[state.custom[k].n.toLowerCase()]) names.push(state.custom[k].n);
+    names.sort(function(a, b){ return a.toLowerCase() < b.toLowerCase() ? -1 : 1; });
+    var opts = "";
+    for (var m = 0; m < names.length; m++) opts += '<option value="' + esc(names[m]) + '"></option>';
+    document.getElementById("collNames").innerHTML = opts;
+  }
   var WHEEL_COLOURS = [["#ffc400","#3a2500"],["#ff2d3d","#fff"],["#12c95b","#06301a"],["#1f7bff","#fff"],["#9b3dff","#fff"]];
   var spinVeil = document.getElementById("spinVeil");
   var wheel = document.getElementById("wheel");
@@ -1020,11 +1152,8 @@ footer .link{margin:0}
   var slices = [], rotation = 0, spinning = false, picked = null;
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  (function(){
-    var opts = "";
-    for (var i = 0; i < COLLECTION.length; i++) opts += '<option value="' + esc(COLLECTION[i][0]) + '"></option>';
-    document.getElementById("collNames").innerHTML = opts;
-  })();
+  addPlayedGames(allPlayedNames());
+  rebuildCollection();
   document.getElementById("collToggle").onclick = function(){
     collOpen = !collOpen;
     this.setAttribute("aria-expanded", collOpen ? "true" : "false");
@@ -1032,6 +1161,82 @@ footer .link{margin:0}
     document.getElementById("collList").hidden = !collOpen;
     renderExtras();
   };
+
+  function armed(btn, label, armedLabel, action){
+    var timer = null;
+    btn.onclick = function(){
+      if (btn.className.indexOf("armed") > -1) {
+        clearTimeout(timer); btn.className = btn.className.replace(" armed", ""); btn.textContent = label;
+        action();
+      } else {
+        btn.className += " armed"; btn.textContent = armedLabel;
+        timer = setTimeout(function(){ btn.className = btn.className.replace(" armed", ""); btn.textContent = btn.getAttribute("data-label") || label; }, 4000);
+      }
+    };
+  }
+  // ---- add / edit our own games ----
+  var ownVeil = document.getElementById("ownVeil"), ownEditing = -1;
+  var ownName = document.getElementById("ownName"), ownMin = document.getElementById("ownMin"),
+      ownMax = document.getElementById("ownMax"), ownTime = document.getElementById("ownTime"),
+      ownWarn = document.getElementById("ownWarn"), ownDel = document.getElementById("ownDel"),
+      ownSave = document.getElementById("ownSave");
+  function openOwn(idx){
+    ownEditing = idx; ownWarn.textContent = "";
+    var g = idx > -1 ? state.custom[idx] : { n: "", min: null, max: null, t: null };
+    document.getElementById("ownTitle").textContent = idx > -1 ? g.n : "Add a game";
+    ownName.value = g.n; ownMin.value = g.min || ""; ownMax.value = g.max || ""; ownTime.value = g.t || "";
+    ownSave.textContent = idx > -1 ? "Save" : "Add game";
+    ownDel.style.display = idx > -1 ? "inline-block" : "none";
+    ownDel.className = "btn danger"; ownDel.textContent = state.custom[idx] && state.custom[idx].off ? "Delete" : "Remove";
+    ownVeil.className = "veil show";
+    if (idx < 0) ownName.focus();
+  }
+  function closeOwn(){ ownVeil.className = "veil"; }
+  document.getElementById("addOwnBtn").onclick = function(){ openOwn(-1); };
+  document.getElementById("ownCancel").onclick = closeOwn;
+  ownVeil.onclick = function(e){ if (e.target === ownVeil) closeOwn(); };
+  document.getElementById("ownList").onclick = function(e){
+    var t = e.target;
+    while (t && t !== this && !(t.getAttribute && t.getAttribute("data-k") !== null)) t = t.parentNode;
+    if (!t || t === this) return;
+    var i = findCustom(t.getAttribute("data-k"));
+    if (i > -1) openOwn(i);
+  };
+  ownSave.onclick = function(){
+    var g = cleanCustom({ n: ownName.value, min: ownMin.value, max: ownMax.value, t: ownTime.value });
+    if (!g) { ownWarn.textContent = "Type the game\u2019s name first."; return; }
+    if (BGG_NAMES[g.n.toLowerCase()]) { ownWarn.textContent = g.n + " is already in the collection."; return; }
+    var dup = findCustom(g.n);
+    if (dup > -1 && dup !== ownEditing) { ownWarn.textContent = g.n + " is already one of our games."; return; }
+    if (ownEditing > -1) {
+      var old = state.custom[ownEditing];
+      if (old.n !== g.n) {
+        // renaming: update the nights that used the old name, so stats stay together
+        for (var i = 0; i < state.nights.length; i++) {
+          var gs = state.nights[i].g, changed = false;
+          for (var j = 0; j < gs.length; j++) if (gs[j].toLowerCase() === old.n.toLowerCase()) { gs[j] = g.n; changed = true; }
+          if (changed) { state.nights[i].g = toGames(gs); cloudPut(state.nights[i]); }
+        }
+        if (gameId(old.n) !== gameId(g.n)) cloudGameDel(old.n);
+      }
+      state.custom[ownEditing] = g;
+    } else state.custom.push(g);
+    save(); cloudGame(g); rebuildCollection(); render(-1); closeOwn();
+    msg.textContent = ownEditing > -1 ? g.n + " updated." : g.n + " added to the collection and the spinner.";
+  };
+  armed(ownDel, "Remove", "Tap again to confirm", function(){
+    if (ownEditing < 0) return;
+    var g = state.custom[ownEditing], played = playedSet()[g.n.toLowerCase()];
+    if (played && !g.off) {
+      // played games keep their history: take them off the wheel instead of deleting
+      g.off = true; cloudGame(g);
+      msg.textContent = g.n + " is off the spinner. Its nights still count.";
+    } else {
+      state.custom.splice(ownEditing, 1); cloudGameDel(g.n);
+      msg.textContent = g.n + " removed.";
+    }
+    save(); rebuildCollection(); render(-1); closeOwn();
+  });
 
   function recentGames(){
     var seen = {}, from = state.nights.length - 7;
@@ -1046,7 +1251,7 @@ footer .link{margin:0}
     var out = [];
     for (var i = 0; i < COLLECTION.length; i++) {
       var g = COLLECTION[i];
-      if (filt.players === 6 ? g[2] < 6 : (filt.players && (filt.players < g[1] || filt.players > g[2]))) continue;
+      if (filt.players === 6 ? (g[2] && g[2] < 6) : (filt.players && ((g[1] && filt.players < g[1]) || (g[2] && filt.players > g[2])))) continue;
       if (filt.time === 15 && !(g[3] && g[3] <= 15)) continue;
       if (filt.time === 30 && !(g[3] && g[3] <= 30)) continue;
       if (filt.time === 99 && !(g[3] && g[3] > 30)) continue;
@@ -1116,8 +1321,9 @@ footer .link{margin:0}
     spinning = false; spinBtn.disabled = false;
     var g = picked;
     document.getElementById("rName").textContent = g[0];
-    document.getElementById("rMeta").textContent =
-      (g[1] === g[2] ? g[1] : g[1] + "\u2013" + g[2]) + " players" + (g[3] ? " \u00B7 about " + g[3] + " min" : "");
+    var pl = g[1] && g[2] ? (g[1] === g[2] ? g[1] : g[1] + "\u2013" + g[2]) + " players" : g[1] ? g[1] + "+ players" : g[2] ? "Up to " + g[2] + " players" : "";
+    var tm = g[3] ? "about " + g[3] + " min" : "";
+    document.getElementById("rMeta").textContent = pl && tm ? pl + " \u00B7 " + tm : (pl || tm || "One of our own games");
     result.hidden = false;
   }
 
