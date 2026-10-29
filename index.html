@@ -377,7 +377,7 @@ footer .link{margin:0}
   <div class="party" id="party"></div>
     <p class="count tally-count"><b id="n">0</b> of 100 lights on</p>
   <p class="sync" id="sync"><span class="dot"></span><span id="syncText">Saved on this device only</span></p>
-  <p class="ver" id="ver">Version Oct 28d · family code <span id="verFam">none</span></p>
+  <p class="ver" id="ver">Version Oct 28e · family code <span id="verFam">none</span></p>
   <p class="streak" id="streak"></p>
   </section>
 
@@ -422,7 +422,7 @@ footer .link{margin:0}
       <label for="titleIn">Challenge name</label>
       <input id="titleIn" maxlength="40">
       <label for="famIn" style="margin-top:16px">Family code</label>
-      <input id="famIn" maxlength="60" autocomplete="off" spellcheck="false" placeholder="fam-\u2026">
+      <input id="famIn" maxlength="60" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="fam-\u2026">
       <p class="famNote" id="famNote">Phones with the same family code share the same lights.</p>
       <div class="row">
         <button type="button" class="btn danger" id="resetBtn">Start over</button>
@@ -580,12 +580,20 @@ footer .link{margin:0}
   function readFamily(){
     var m = /[#&]family=([A-Za-z0-9_-]+)/.exec(location.hash || "");
     if (m && validFamily(m[1])) {
+      var code = m[1].toLowerCase();
       var prev = ""; try { prev = localStorage.getItem(FAM_KEY) || ""; } catch (e) {}
-      if (prev !== m[1]) forgetMerged(m[1]);
-      try { localStorage.setItem(FAM_KEY, m[1]); } catch (e) {}
-      return m[1];
+      if (prev !== code) forgetMerged(code);
+      try { localStorage.setItem(FAM_KEY, code); } catch (e) {}
+      return code;
     }
-    try { var s = localStorage.getItem(FAM_KEY); if (validFamily(s)) return s; } catch (e) {}
+    try {
+      var s = localStorage.getItem(FAM_KEY);
+      if (validFamily(s)) {
+        // a code saved with capitals (phones capitalise the first letter) joins the real family
+        if (s !== s.toLowerCase()) { s = s.toLowerCase(); forgetMerged(s); localStorage.setItem(FAM_KEY, s); }
+        return s;
+      }
+    } catch (e) {}
     return "";
   }
   // keep the code in the address, so "Add to Home Screen" saves a link that stays connected
@@ -1058,7 +1066,7 @@ footer .link{margin:0}
   document.getElementById("saveTitle").onclick = function(){
     var v = titleIn.value.replace(/^\s+|\s+$/g, "");
     if (v && v !== state.title) { state.title = v; cloudTitle(v); }
-    var f = famIn.value.replace(/\s+/g, "");
+    var f = famIn.value.replace(/\s+/g, "").toLowerCase();
     if (f !== family) {
       if (f && !validFamily(f)) { famNote.textContent = "That code doesn\u2019t look right. It should start with fam- and be at least 20 characters."; return; }
       family = f;
@@ -1414,7 +1422,7 @@ footer .link{margin:0}
   function setSync(on, text){
     syncEl.className = on ? "sync on" : "sync"; syncText.textContent = text;
     // last 4 characters are enough to compare devices without showing the whole code
-    document.getElementById("verFam").textContent = family ? "\u2026" + family.slice(-4) : "none";
+    document.getElementById("verFam").textContent = family ? family.slice(0, 6) + "\u2026" + family.slice(-4) : "none";
   }
 
   render(-1);
