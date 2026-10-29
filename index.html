@@ -349,6 +349,8 @@ footer .link{margin:0}
 .ownGrid label{font-size:.92rem !important}
 
 .ver{text-align:center;font-size:.8rem;color:rgba(255,255,255,.75);margin:6px 0 0;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+
+.tallyMore{margin-top:10px}
 </style>
 </head>
 <body>
@@ -375,7 +377,7 @@ footer .link{margin:0}
   <div class="party" id="party"></div>
     <p class="count tally-count"><b id="n">0</b> of 100 lights on</p>
   <p class="sync" id="sync"><span class="dot"></span><span id="syncText">Saved on this device only</span></p>
-  <p class="ver" id="ver">Version Oct 28c · family code <span id="verFam">none</span></p>
+  <p class="ver" id="ver">Version Oct 28d · family code <span id="verFam">none</span></p>
   <p class="streak" id="streak"></p>
   </section>
 
@@ -400,6 +402,7 @@ footer .link{margin:0}
   <section class="games">
     <h2>Games we’ve played</h2>
     <ul class="tally" id="tally"></ul>
+    <button type="button" class="collToggle tallyMore" id="tallyMore" hidden></button>
     <p class="empty" id="tallyEmpty">Add a game when you light a bulb and it’ll show up here.</p>
   </section>
 
@@ -609,7 +612,11 @@ footer .link{margin:0}
     if (!family) { setSync(false, "Saved on this device only"); return; }
     if (!FIREBASE_CONFIG || !window.firebase) { setSync(false, "Sync isn\u2019t set up yet. Saved on this device only."); return; }
     try {
-      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      if (!firebase.apps.length) {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        // home screen apps on iPhone and iPad can't always hold Firebase's default connection open
+        try { firebase.firestore().settings({ experimentalForceLongPolling: true, merge: true }); } catch (e) {}
+      }
       fam = firebase.firestore().collection("families").doc(family);
     } catch (e) { fam = null; setSync(false, "Sync isn\u2019t working. Saved on this device only."); return; }
     writeError = "";
@@ -639,7 +646,7 @@ footer .link{margin:0}
       state.custom = list; save();
       rebuildCollection(); render(-1);
     }, function(){}));
-    unsub.push(fam.collection("nights").onSnapshot(function(snap){
+    unsub.push(fam.collection("nights").onSnapshot({ includeMetadataChanges: true }, function(snap){
       var list = [], have = {};
       snap.forEach(function(doc){
         var x = doc.data();
@@ -664,7 +671,10 @@ footer .link{margin:0}
       state.nights = list; sortNights(); save();
       if (!gamesFirst) addPlayedGames(allPlayedNames());
       render(!snap.metadata.hasPendingWrites && list.length === before + 1 ? indexOfDate(newestAdded(snap)) : -1);
-      if (!snap.metadata.fromCache && !writeError) setSync(true, "Synced with the family \u00B7 " + list.length + " light" + (list.length === 1 ? "" : "s"));
+      var lightsTxt = list.length + " light" + (list.length === 1 ? "" : "s");
+      if (writeError) {}
+      else if (snap.metadata.hasPendingWrites) setSync(false, "Sending to the family tracker\u2026 \u00B7 " + lightsTxt);
+      else if (!snap.metadata.fromCache) setSync(true, "Synced with the family \u00B7 " + lightsTxt);
     }, function(){ setSync(false, "Couldn\u2019t reach the family tracker. Check the family code in Settings."); }));
     unsub.push(fam.collection("meta").doc("settings").onSnapshot(function(doc){
       var x = doc.exists ? doc.data() : null;
@@ -833,6 +843,8 @@ footer .link{margin:0}
     }
   }
 
+  var tallyAll = false;
+  document.getElementById("tallyMore").onclick = function(){ tallyAll = !tallyAll; render(-1); };
   function render(popIndex){
     var n = state.nights.length;
     document.getElementById("title").textContent = state.title;
@@ -867,12 +879,16 @@ footer .link{margin:0}
     var tally = document.getElementById("tally");
     var html = "";
     var top = counts.length ? counts[0].n : 1;
-    for (var t = 0; t < counts.length && t < 8; t++) {
+    var showN = tallyAll ? counts.length : 8;
+    for (var t = 0; t < counts.length && t < showN; t++) {
       html += '<li><span class="name">' + esc(counts[t].name) + '</span><span class="bar"><span class="fill" style="display:block;width:' +
         Math.round(counts[t].n / top * 100) + '%"></span></span><span class="x">\u00D7' + counts[t].n + '</span></li>';
     }
     tally.innerHTML = html;
     document.getElementById("tallyEmpty").style.display = counts.length ? "none" : "block";
+    var more = document.getElementById("tallyMore");
+    more.hidden = counts.length <= 8;
+    more.textContent = tallyAll ? "Show top 8 only" : "Show all " + counts.length + " games";
     renderExtras();
   }
 
